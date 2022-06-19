@@ -1,0 +1,55 @@
+name: CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+env:
+  appname: app${{ github.run_number }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Python 3.10
+      uses: actions/setup-python@v3
+      with:
+        python-version: "3.10"
+
+    - name: Build
+      run: g++ Hello_World.cpp -o ${{ env.appname }}${{ runner.os }}
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@v3
+      with:
+       name: artifact
+       path: ${{ env.appname }}${{ runner.os }}
+       retention-days: 5
+
+  message:
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - uses: actions/download-artifact@v3
+      with:
+        name: artifact
+        path: artifacts_folder
+
+    - name: Telegram message
+      uses: appleboy/telegram-action@master
+      with:
+        to: 826611050
+        token: ${{ secrets.BOT_TGTOKEN }}
+        message: |
+          Event occured in ${{ github.repository }} repository by ${{ github.actor }}.
+          Event type: ${{ github.event_name }}
+          Event status: ${{ job.status }}
+        document: artifacts_folder/**
